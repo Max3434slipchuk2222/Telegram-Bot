@@ -10,6 +10,7 @@ from handlers import quiz_create_handler as quiz_create
 from paths import DIR, QUIZZES_FILE, USERS_FILE, RATINGS_FILE
 from handlers import quiz_play_handler as quiz_play
 from handlers import quiz_rating_handler as quiz_rating
+from handlers import quiz_profile_handler as quiz_profile
 
 
 load_dotenv() 
@@ -37,10 +38,12 @@ async def main():
     bot = Bot(token=TOKEN, default_parse_mode="Markdown")
     dp = Dispatcher(bot=bot)
 
-    dp.include_router(bshandler.router)
+    
     dp.include_router(quiz_create.router)
     dp.include_router(quiz_play.router)
     dp.include_router(quiz_rating.router)
+    dp.include_router(quiz_profile.router)
+    dp.include_router(bshandler.router)
     print("Бот запускається")
     await dp.start_polling(bot, drop_pending_updates=True)
 

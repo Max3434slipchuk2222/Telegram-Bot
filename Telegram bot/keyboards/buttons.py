@@ -6,7 +6,8 @@ menu_keyboard = ReplyKeyboardMarkup(
         [
             KeyboardButton(text="Пройти вікторину"),
             KeyboardButton(text="Рейтинг")
-        ]
+        ],
+        [KeyboardButton(text="Мій профіль")]
     ],
     resize_keyboard=True,
     one_time_keyboard=False 

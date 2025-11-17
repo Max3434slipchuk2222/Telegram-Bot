@@ -1,17 +1,31 @@
 from aiogram import Router, types, F
-from aiogram.filters import Command, StateFilter
+from aiogram.filters import Command, StateFilter, CommandStart,CommandObject 
 from aiogram.fsm.context import FSMContext
 from aiogram.types import ReplyKeyboardRemove
 
 from keyboards.buttons import menu_keyboard
-
 from utils.file_manager import register_user
-
-from states.quiz_state import QuizCreation
+from states.quiz_state import QuizCreation, QuizPlaying 
+from handlers.quiz_play_handler import _init_quiz_session
 
 router = Router()
 
-@router.message(Command("start"))
+@router.message(CommandStart(deep_link=True))
+async def handle_deep_link(message: types.Message, state: FSMContext, command: CommandObject):
+    register_user(
+        user_id=message.from_user.id,
+        first_name=message.from_user.first_name,
+        username=message.from_user.username
+    )
+    quiz_id = command.args
+    if not quiz_id:
+        await message.answer("Помилка: Неправильне посилання.", reply_markup=menu_keyboard)
+        return
+
+    await _init_quiz_session(message, state, quiz_id)
+
+
+@router.message(CommandStart(deep_link=False)) 
 async def command_start(message: types.Message, state: FSMContext):
     await state.clear()
     register_user(
@@ -36,7 +50,9 @@ async def command_help(message: types.Message):
         "/rating - Переглянути рейтинг\n"
         "/help - Показати довідку команд\n"
         "/cancel - Скасувати створення вікторини"
+        "/profile - Вивести ваш профіль"
     )
+    
 @router.message(Command("cancel"), StateFilter(None))
 async def command_cancel(message: types.Message, state: FSMContext):
     await message.answer("Немає активного процесу для скасування.", reply_markup=menu_keyboard)

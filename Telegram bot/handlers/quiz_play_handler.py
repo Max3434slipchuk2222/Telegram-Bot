@@ -179,6 +179,7 @@ async def send_next_question(message: types.Message, state: FSMContext):
         
         await message.answer(f"Питання {index + 1}/{len(questions)}:\n\n{ques['text']}", reply_markup=keyboard)
     else:
+        user_id = message.from_user.id
         score = data.get('score', 0)
         title = data.get('quiz_title', '')
         nickname = data.get('nickname', 'Гравець')
@@ -187,7 +188,7 @@ async def send_next_question(message: types.Message, state: FSMContext):
         total_questions = len(questions)
 
         if quiz_id:
-            save_game_result(quiz_id, title, nickname, score, total_questions)
+            save_game_result(user_id, quiz_id, title, nickname, score, total_questions)
 
         final_text = f"Вікторину '{title}' завершено!\n\n" \
                      f"{nickname}, ваш результат: {score} з {total_questions}"

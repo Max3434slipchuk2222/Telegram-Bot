@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 import json
-from paths import QUIZZES_FILE, BOT_USERNAME, RATINGS_FILE
+from paths import QUIZZES_FILE, BOT_USERNAME, RATINGS_FILE, USERS_FILE
 
 def get_categories_keyboard():
     builder = InlineKeyboardBuilder()
@@ -147,4 +147,109 @@ def get_rated_quizzes_keyboard():
         return None 
 
     builder.adjust(1)
+    return builder.as_markup()
+def create_profile_keyboard():
+    builder = InlineKeyboardBuilder()
+
+    builder.add(InlineKeyboardButton(
+        text="📝 Мої створені вікторини",
+        callback_data="profile_created" 
+    ))
+    
+    builder.add(InlineKeyboardButton(
+        text="Мої пройдені вікторини",
+        callback_data="profile_played"
+    ))
+    
+    builder.adjust(1)
+    return builder.as_markup()
+def create_my_quizzes_keyboard(user_id: int):
+    builder = InlineKeyboardBuilder()
+
+    try:
+        with open(USERS_FILE, 'r', encoding='utf-8') as f:
+            users_data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        users_data = {}
+
+    try:
+        with open(QUIZZES_FILE, 'r', encoding='utf-8') as f:
+            quizzes_data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        quizzes_data = []
+
+    user_id_str = str(user_id)
+    created_quiz_ids = users_data.get(user_id_str, {}).get('created_quizzes', [])
+
+    if not created_quiz_ids:
+        builder.add(InlineKeyboardButton(
+            text="Ви ще не створили жодної вікторини.",
+            callback_data="profile_noop" 
+        ))
+        builder.adjust(1)
+        
+    else:
+        quiz_id_to_title = {quiz['id']: quiz['title'] for quiz in quizzes_data}
+
+        for quiz_id in created_quiz_ids:
+            if quiz_id in quiz_id_to_title and BOT_USERNAME:
+                title = quiz_id_to_title[quiz_id]
+                
+                link = f"https://t.me/{BOT_USERNAME}?start={quiz_id}"
+                share_url = f"https://t.me/share/url?url={link}&text=Хочеш спробувати пройти цю телеграм-вікторину? Натисни на посилання!'{title}'!"
+                
+                builder.add(InlineKeyboardButton(
+                    text=f"{title}", 
+                    url=share_url 
+                ))
+    builder.add(InlineKeyboardButton(
+        text="⬅ Назад до профілю",
+        callback_data="profile_main" 
+    ))
+    
+    builder.adjust(1) 
+    return builder.as_markup()
+def create_my_played_keyboard(user_id: int):
+    builder = InlineKeyboardBuilder()
+
+    try:
+        with open(RATINGS_FILE, 'r', encoding='utf-8') as f:
+            ratings_data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        ratings_data = {}
+
+    try:
+        with open(QUIZZES_FILE, 'r', encoding='utf-8') as f:
+            quizzes_data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        quizzes_data = [] 
+
+    played_quiz_ids = set()
+    for quiz_id, results in ratings_data.items():
+        for entry in results:
+            if entry.get('user_id') == user_id:
+                played_quiz_ids.add(quiz_id)
+                break 
+
+    if not played_quiz_ids:
+        builder.add(InlineKeyboardButton(
+            text="Ви ще не пройшли жодної вікторини.",
+            callback_data="profile_noop" 
+        ))
+    else:
+        quiz_id_to_title = {quiz['id']: quiz['title'] for quiz in quizzes_data}
+
+        for quiz_id in played_quiz_ids:
+            if quiz_id in quiz_id_to_title:
+                title = quiz_id_to_title[quiz_id]
+                builder.add(InlineKeyboardButton(
+                    text=f"{title}", 
+                    callback_data="profile_noop" 
+                ))
+    builder.add(InlineKeyboardButton(
+        text="⬅ Назад до профілю",
+        callback_data="profile_main"
+    ))
+    
+    builder.adjust(1) 
     return builder.as_markup()
