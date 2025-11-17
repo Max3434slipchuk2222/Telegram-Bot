@@ -157,7 +157,7 @@ def create_profile_keyboard():
     ))
     
     builder.add(InlineKeyboardButton(
-        text="Мої пройдені вікторини",
+        text="📝 Мої пройдені вікторини",
         callback_data="profile_played"
     ))
     
@@ -227,7 +227,8 @@ def create_my_played_keyboard(user_id: int):
     played_quiz_ids = set()
     for quiz_id, results in ratings_data.items():
         for entry in results:
-            if entry.get('user_id') == user_id:
+            print(user_id, entry.get('user_id'))
+            if str(entry.get('user_id')) == str(user_id):
                 played_quiz_ids.add(quiz_id)
                 break 
 

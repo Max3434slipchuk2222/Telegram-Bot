@@ -1,6 +1,7 @@
 from aiogram import Bot, Router, types, F
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
+from aiogram.filters import CommandStart,CommandObject, StateFilter
 import json
 
 from keyboards.inline_buttons import (
@@ -14,9 +15,24 @@ from keyboards.buttons import menu_keyboard
 from states.quiz_state import QuizPlaying 
 from paths import QUIZZES_FILE, BOT_USERNAME
 from aiogram.exceptions import TelegramBadRequest
+from utils.file_manager import register_user
 router = Router()
 
+@router.message(CommandStart(deep_link=True))
+async def handle_deep_link(message: types.Message, state: FSMContext, command: CommandObject):
+    register_user(
+        user_id=message.from_user.id,
+        first_name=message.from_user.first_name,
+        username=message.from_user.username
+    )
+    
+    quiz_id = command.args
+    
+    if not quiz_id:
+        await message.answer("Помилка: Неправильне посилання.", reply_markup=menu_keyboard)
+        return
 
+    await _init_quiz_session(message, state, quiz_id)
 @router.message(F.text == "Пройти вікторину")
 @router.message(Command("play"))
 async def start_playing(message: types.Message, state: FSMContext):
@@ -179,7 +195,7 @@ async def send_next_question(message: types.Message, state: FSMContext):
         
         await message.answer(f"Питання {index + 1}/{len(questions)}:\n\n{ques['text']}", reply_markup=keyboard)
     else:
-        user_id = message.from_user.id
+        user_id = message.chat.id
         score = data.get('score', 0)
         title = data.get('quiz_title', '')
         nickname = data.get('nickname', 'Гравець')
