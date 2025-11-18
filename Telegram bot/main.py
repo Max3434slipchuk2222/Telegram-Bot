@@ -36,7 +36,7 @@ async def main():
                 json.dump(initial_data, f)
 
     bot = Bot(token=TOKEN, default_parse_mode="Markdown")
-    dp = Dispatcher(bot=bot)
+    dp = Dispatcher()
 
     
     dp.include_router(quiz_create.router)

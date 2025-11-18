@@ -3,6 +3,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
 from aiogram.filters import CommandStart,CommandObject, StateFilter
 import json
+import time
 
 from keyboards.inline_buttons import (
     get_categories_keyboard, 
@@ -19,7 +20,7 @@ from utils.file_manager import register_user
 router = Router()
 
 @router.message(CommandStart(deep_link=True))
-async def handle_deep_link(message: types.Message, state: FSMContext, command: CommandObject):
+async def handle_link(message: types.Message, state: FSMContext, command: CommandObject):
     register_user(
         user_id=message.from_user.id,
         first_name=message.from_user.first_name,
@@ -46,11 +47,12 @@ async def start_playing(message: types.Message, state: FSMContext):
 @router.callback_query(F.data.startswith("category_"))
 async def select_category(callback: types.CallbackQuery, state: FSMContext):
     category = callback.data.split('_', 1)[1]
-    quizzes_kb = get_quizzes_keyboard(category)
-    if quizzes_kb:
-        await callback.message.edit_text(f"Оберіть вікторину з категорії '{category}':", reply_markup=quizzes_kb)
+    quizzes = get_quizzes_keyboard(category)
+    if quizzes:
+        await callback.message.edit_text(f"Оберіть вікторину з категорії '{category}':", reply_markup=quizzes)
     else:
-        await callback.message.edit_text(f"У категорії '{category}' немає вікторин.", reply_markup=get_categories_keyboard())
+        await callback.message.edit_text(f"У категорії '{category}' немає вікторин.", 
+        reply_markup=get_categories_keyboard())
     await callback.answer()
 
 @router.callback_query(F.data == "back_to_categories")
@@ -58,14 +60,18 @@ async def back_to_categories(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.edit_text("Оберіть категорію вікторини:", reply_markup=get_categories_keyboard())
     await callback.answer()
 
-async def _init_quiz_session(message_or_callback: types.Message | types.CallbackQuery, state: FSMContext, quiz_id: str):
+async def _init_quiz_session(message_callback: types.Message | types.CallbackQuery, state: FSMContext, quiz_id: str):
     try:
         with open(QUIZZES_FILE, 'r', encoding='utf-8') as f:
             quizzes = json.load(f)
         
-        current_quiz = next((q for q in quizzes if q['id'] == quiz_id), None)
-        
-        answer_target = message_or_callback if isinstance(message_or_callback, types.Message) else message_or_callback.message
+        current_quiz = None
+        for quiz in quizzes:
+            if quiz.get('id') == quiz_id:
+                current_quiz = quiz
+                break
+                
+        answer_target = message_callback if isinstance(message_callback, types.Message) else message_callback.message
 
         if not current_quiz:
             await answer_target.answer("Помилка: Вікторину не знайдено.", reply_markup=menu_keyboard)
@@ -78,20 +84,20 @@ async def _init_quiz_session(message_or_callback: types.Message | types.Callback
             questions=current_quiz['questions']
         )
         
-        text = f"Ви обрали вікторину: **{current_quiz['title']}**\n\n" \
-               f"Будь ласка, введіть ваш **нікнейм** для цієї гри:"
+        text = f"Ви обрали вікторину: {current_quiz['title']}\n\n" \
+               f"Будь ласка, введіть ваш нікнейм для цієї гри:"
         
-        if isinstance(message_or_callback, types.Message):
+        if isinstance(message_callback, types.Message):
             await answer_target.answer(text)
         else: 
             try:
-                await message_or_callback.message.delete()
+                await message_callback.message.delete()
             except TelegramBadRequest:
                 pass 
             await answer_target.answer(text)
 
     except Exception as e:
-        answer_target = message_or_callback if isinstance(message_or_callback, types.Message) else message_or_callback.message
+        answer_target = message_callback if isinstance(message_callback, types.Message) else message_callback.message
         await answer_target.answer(f"Сталася помилка: {e}", reply_markup=menu_keyboard)
 
 @router.callback_query(F.data.startswith("quiz_"))
@@ -151,7 +157,8 @@ async def handle_start_game(callback: types.CallbackQuery, state: FSMContext):
         current_question_index=0,
         score=0,
         current_selections=[],
-        user_answers=[]
+        user_answers=[],
+        start_time=time.time()
     )
     await send_next_question(callback.message, state)
     
@@ -203,8 +210,11 @@ async def send_next_question(message: types.Message, state: FSMContext):
         settings = data.get('settings', {})
         total_questions = len(questions)
 
+        start_time = data.get('start_time', time.time())
+        duration = int(time.time() - start_time)
+
         if quiz_id:
-            save_game_result(user_id, quiz_id, title, nickname, score, total_questions)
+            save_game_result(user_id, quiz_id, nickname, score, total_questions, duration)
 
         final_text = f"Вікторину '{title}' завершено!\n\n" \
                      f"{nickname}, ваш результат: {score} з {total_questions}"

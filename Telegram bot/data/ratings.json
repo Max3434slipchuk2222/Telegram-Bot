@@ -1,0 +1,41 @@
+{
+    "f3587e1b-a5fd-455a-9d72-c227f88e3b77": [
+        {
+            "user_id": 5078059855,
+            "nickname": "karap",
+            "score": 7,
+            "total": 8,
+            "duration": 27
+        }
+    ],
+    "c4cceef3-f6cc-4a41-9013-2efb2adaa7cd": [
+        {
+            "user_id": 5078059855,
+            "nickname": "dfd",
+            "score": 0,
+            "total": 1,
+            "duration": 2
+        },
+        {
+            "user_id": 5078059855,
+            "nickname": "flop",
+            "score": 1,
+            "total": 1,
+            "duration": 5
+        },
+        {
+            "user_id": 5078059855,
+            "nickname": "der",
+            "score": 1,
+            "total": 1,
+            "duration": 2
+        },
+        {
+            "user_id": 5078059855,
+            "nickname": "drop",
+            "score": 1,
+            "total": 1,
+            "duration": 1
+        }
+    ]
+}

@@ -33,7 +33,9 @@ def get_categories_keyboard():
     
     builder.adjust(1)
     return builder.as_markup()
-def get_quizzes_keyboard(category: str):
+
+
+def get_quizzes_keyboard(categoryName):
     builder = InlineKeyboardBuilder()
     try:
         with open(QUIZZES_FILE, 'r', encoding='utf-8') as f:
@@ -44,7 +46,7 @@ def get_quizzes_keyboard(category: str):
     category_quizzes = []
 
     for quiz in quizzes:
-        if quiz.get('category') == category:
+        if quiz.get('category') == categoryName:
             category_quizzes.append(quiz)
 
     if not category_quizzes:
@@ -64,21 +66,23 @@ def get_quizzes_keyboard(category: str):
     
     builder.adjust(1)
     return builder.as_markup()
-def create_question_keyboard(question_data: dict, selected_indices: list = []):
+
+
+def create_question_keyboard(question_data, selected_answers):
     builder = InlineKeyboardBuilder()
     
     for i, option_text in enumerate(question_data['options']):
         
-        prefix = "✅ " if i in selected_indices else " "
+        prefix = "✅ " if i in selected_answers else " "
         
         builder.add(InlineKeyboardButton(
             text=f"{prefix}{option_text}",
             callback_data=f"play_answer_{i}"
         ))
 
-    can_confirm = len(selected_indices) > 0
+    has_chosen = len(selected_answers) > 0
     
-    if can_confirm:
+    if has_chosen:
         builder.add(InlineKeyboardButton(
             text=" <-- Підтвердити --> ",
             callback_data="play_confirm"
@@ -86,7 +90,9 @@ def create_question_keyboard(question_data: dict, selected_indices: list = []):
     
     builder.adjust(1)
     return builder.as_markup()
-def create_settings_keyboard(settings: dict, quiz_id: str):
+
+
+def create_settings_keyboard(settings, quiz_id):
     builder = InlineKeyboardBuilder()
 
     show_answers = settings.get('show_answers', True) 
@@ -117,6 +123,7 @@ def create_settings_keyboard(settings: dict, quiz_id: str):
     ))
     builder.adjust(1)
     return builder.as_markup()
+
 def get_rated_quizzes_keyboard():
     builder = InlineKeyboardBuilder()
     try:
@@ -131,19 +138,21 @@ def get_rated_quizzes_keyboard():
     except (FileNotFoundError, json.JSONDecodeError):
         quizzes = []
 
-    quiz_id_to_title = {quiz['id']: quiz['title'] for quiz in quizzes}
+    quiz_title = {}
+    for quiz in quizzes:
+        quiz_title[quiz['id']] = quiz['title']
 
-    quizzes_found = False
+    found_quiz = False
     for quiz_id in ratings:
-        if quiz_id in quiz_id_to_title:
-            title = quiz_id_to_title[quiz_id]
+        if quiz_id in quiz_title:
+            title = quiz_title[quiz_id]
             builder.add(InlineKeyboardButton(
                 text=title,
                 callback_data=f"rating_{quiz_id}" 
             ))
-            quizzes_found = True
+            found_quiz = True
 
-    if not quizzes_found:
+    if not found_quiz:
         return None 
 
     builder.adjust(1)
@@ -163,23 +172,28 @@ def create_profile_keyboard():
     
     builder.adjust(1)
     return builder.as_markup()
-def create_my_quizzes_keyboard(user_id: int):
+def create_my_quizzes_keyboard(user_id):
     builder = InlineKeyboardBuilder()
 
     try:
         with open(USERS_FILE, 'r', encoding='utf-8') as f:
-            users_data = json.load(f)
+            users = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
-        users_data = {}
+        users = {}
 
     try:
         with open(QUIZZES_FILE, 'r', encoding='utf-8') as f:
-            quizzes_data = json.load(f)
+            quizzes = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
-        quizzes_data = []
+        quizzes = []
 
     user_id_str = str(user_id)
-    created_quiz_ids = users_data.get(user_id_str, {}).get('created_quizzes', [])
+    user_data = users.get(user_id_str)
+
+    if user_data is None:
+        created_quiz_ids = []
+    else:
+        created_quiz_ids = user_data.get('created_quizzes', [])
 
     if not created_quiz_ids:
         builder.add(InlineKeyboardButton(
@@ -189,14 +203,16 @@ def create_my_quizzes_keyboard(user_id: int):
         builder.adjust(1)
         
     else:
-        quiz_id_to_title = {quiz['id']: quiz['title'] for quiz in quizzes_data}
+        quiz_title = {}
+        for quiz in quizzes:
+            quiz_title[quiz['id']] = quiz['title']
 
         for quiz_id in created_quiz_ids:
-            if quiz_id in quiz_id_to_title and BOT_USERNAME:
-                title = quiz_id_to_title[quiz_id]
+            if quiz_id in quiz_title and BOT_USERNAME:
+                title = quiz_title[quiz_id]
                 
                 link = f"https://t.me/{BOT_USERNAME}?start={quiz_id}"
-                share_url = f"https://t.me/share/url?url={link}&text=Хочеш спробувати пройти цю телеграм-вікторину? Натисни на посилання!'{title}'!"
+                share_url = f"https://t.me/share/url?url={link}&text=Хочеш спробувати пройти цю телеграм-вікторину? Натисни на посилання!"
                 
                 builder.add(InlineKeyboardButton(
                     text=f"{title}", 
@@ -214,18 +230,18 @@ def create_my_played_keyboard(user_id: int):
 
     try:
         with open(RATINGS_FILE, 'r', encoding='utf-8') as f:
-            ratings_data = json.load(f)
+            ratings = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
-        ratings_data = {}
+        ratings = {}
 
     try:
         with open(QUIZZES_FILE, 'r', encoding='utf-8') as f:
-            quizzes_data = json.load(f)
+            quizzes = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
-        quizzes_data = [] 
+        quizzes = [] 
 
     played_quiz_ids = set()
-    for quiz_id, results in ratings_data.items():
+    for quiz_id, results in ratings.items():
         for entry in results:
             print(user_id, entry.get('user_id'))
             if str(entry.get('user_id')) == str(user_id):
@@ -238,11 +254,13 @@ def create_my_played_keyboard(user_id: int):
             callback_data="profile_noop" 
         ))
     else:
-        quiz_id_to_title = {quiz['id']: quiz['title'] for quiz in quizzes_data}
+        quiz_title = {}
+        for quiz in quizzes:
+            quiz_title[quiz['id']] = quiz['title']
 
         for quiz_id in played_quiz_ids:
-            if quiz_id in quiz_id_to_title:
-                title = quiz_id_to_title[quiz_id]
+            if quiz_id in quiz_title:
+                title = quiz_title[quiz_id]
                 builder.add(InlineKeyboardButton(
                     text=f"{title}", 
                     callback_data="profile_noop" 

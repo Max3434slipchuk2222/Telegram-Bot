@@ -54,25 +54,25 @@ def add_quiz(user_id, quiz_data):
             json.dump(users, f, indent=4, ensure_ascii=False)
     
     print(f"Вікторина {quiz_id} збережена користувачем {user_id_str}")
-def save_game_result(user_id: int, quiz_id: str, quiz_title: str, nickname: str, score: int, total_questions: int):
+def save_game_result(user_id, quiz_id, nickname, score, total_questions, duration):
     try:
         with open(RATINGS_FILE, 'r', encoding='utf-8') as f:
             ratings = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         ratings = {} 
 
-    new_result_entry = {
+    new_result = {
         'user_id': user_id,
         'nickname': nickname,
         'score': score,
         'total': total_questions,
-        'timestamp': int(time.time()) 
+        'duration': duration 
     }
 
     if quiz_id in ratings:
-        ratings[quiz_id].append(new_result_entry)
+        ratings[quiz_id].append(new_result)
     else:
-        ratings[quiz_id] = [new_result_entry]
+        ratings[quiz_id] = [new_result]
         
     try:
         with open(RATINGS_FILE, 'w', encoding='utf-8') as f:

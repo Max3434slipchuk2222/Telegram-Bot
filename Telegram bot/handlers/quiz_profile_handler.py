@@ -22,7 +22,7 @@ async def show_profile(message_or_callback: types.Message | types.CallbackQuery,
         await message_or_callback.message.edit_text(text, reply_markup=profile_kb)
         await message_or_callback.answer()
 @router.callback_query(F.data == "profile_created")
-async def show_my_created_quizzes(callback: types.CallbackQuery, state: FSMContext):
+async def show_my_created_quizzes(callback: types.CallbackQuery):
     user_id = callback.from_user.id
     
     my_quizzes_kb = create_my_quizzes_keyboard(user_id)
@@ -36,14 +36,14 @@ async def show_my_created_quizzes(callback: types.CallbackQuery, state: FSMConte
 
 
 @router.callback_query(F.data == "profile_played")
-async def show_my_played_quizzes(callback: types.CallbackQuery, state: FSMContext):
+async def show_my_played_quizzes(callback: types.CallbackQuery):
     user_id = callback.from_user.id
     
-    my_played_kb = create_my_played_keyboard(user_id)
+    my_played = create_my_played_keyboard(user_id)
     
     await callback.message.edit_text(
         "Вікторини, в які ви грали:",
-        reply_markup=my_played_kb
+        reply_markup=my_played
     )
     await callback.answer()
 
